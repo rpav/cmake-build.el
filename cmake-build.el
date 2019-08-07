@@ -260,6 +260,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                      (substring (cmake-build--get-run-command run) 2))))
       (message "cmake-build: %s isn't a config." config))))
 
+(defun cmake-build-set-buffer-local-config ()
+  (interactive)
+  (setq-local cmake-build-run-config
+              (list (copy-tree
+                     (rassoc (cmake-build--get-run-config-name) cmake-build-run-config))))
+  (call-interactively #'cmake-build-set-config))
+
 (defun cmake-build-set-project-root (path)
   (interactive
    (list
@@ -378,9 +385,9 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     `(keymap "CMake Build"
              (:build menu-item ,(concat "Build " config) t)
              (:run menu-item ,(concat "Run " config) t)
-             ,@(print (cmake-build--menu-configs))
+             ,@(cmake-build--menu-configs)
              ,@(when (cmake-build--get-other-targets)
-                 (print (cmake-build--menu-other-targets)))
+                 (cmake-build--menu-other-targets))
              ,@(cmake-build--menu-settings))))
 
 (defun cmake-build--popup-menu (config)
