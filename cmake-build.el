@@ -377,6 +377,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                  (:cmake menu-item "Re-run cmake" t)
                  (:clean menu-item "Clean build" t)
                  (:nuke menu-item "Delete cache/Re-run cmake" t)
+                 (:set-buffer-local menu-item "Set buffer-local run config" t)
                  (:set-options menu-item "Set cmake options" t)))))
 
 
@@ -411,7 +412,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (:clean (cmake-build-clean))
     (:build-other-target (cmake-build-other-target (cadr action)))
     (:nuke (cmake-build-clear-cache-and-configure))
-    (:set-options (call-interactively #'cmake-build-set-options))))
+    (:set-options (call-interactively #'cmake-build-set-options))
+    (:set-buffer-local (cmake-build-set-buffer-local-config))))
 
 (defun cmake-build-menu ()
   (interactive)
