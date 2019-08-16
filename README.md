@@ -120,6 +120,12 @@ by using `M-x cmake-build-menu`, which I bind to `C-c b`.  This will let you
 graphically select profiles, run configurations, other targets, and a few basic
 "tools" (such as the `clean` target).
 
+### Debugging
+
+A simple option has been added to call the emacs `M-x gdb` with the current target and default/basic options.  One can run this by `M-x cmake-build-debug` or via the cmake-build menu.
+
+There are no options for this right now; perhaps in the future.
+
 ## Extended Configuration
 
 ### Run configurations
@@ -165,6 +171,17 @@ The `"command"` parameter is what is passed to the shell, along with
   : .. and so on ..
   )
 ```
+
+Additionally, one can specify `(:env ...)` to set various environment variables:
+
+```
+  (mytest
+   (:build "mytest")
+   (:run "" "./mytest" "")
+   (:env "LSAN_OPTIONS=suppressions=..." "SOMEVAR=...")
+```
+
+This applies only while running (or debugging).
 
 ### Other targets
 

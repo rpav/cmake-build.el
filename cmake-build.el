@@ -162,6 +162,10 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (let ((config (cmake-build--get-config config)))
     (cdr (assoc :run config))))
 
+(defun cmake-build--get-run-config-env (&optional config)
+  (let ((config (cmake-build--get-config config)))
+    (cdr (assoc :env config))))
+
 (defun cmake-build--get-other-targets ()
   (cdr (assoc 'cmake-build-other-targets (cmake-build--get-project-data))))
 
@@ -217,6 +221,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (let* ((config (cmake-build--get-run-config))
          (command (cmake-build--get-run-command config))
          (default-directory (cmake-build--get-build-dir (car config)))
+         (process-environment (append (cmake-build--get-run-config-env) process-environment))
          (buffer-name (cmake-build--run-buffer-name))
          (other-buffer-name (cmake-build--build-buffer-name))
          (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
@@ -236,6 +241,14 @@ use Projectile to determine the root on a buffer-local basis, instead.")
          (when (equalp "finished\n" event)
            (cmake-build--invoke-run))))
     (cmake-build--invoke-run)))
+
+(defun cmake-build-debug ()
+  (interactive)
+  (let* ((config (cmake-build--get-run-config))
+         (command (cmake-build--get-run-command config))
+         (default-directory (cmake-build--get-build-dir (car config)))
+         (process-environment (append (cmake-build--get-run-config-env) process-environment)))
+    (gdb (concat "gdb -i=mi --args " command))))
 
 (defun cmake-build-set-options (option-string)
   (interactive
@@ -341,6 +354,14 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (async-shell-command (concat "cmake --build . --target " target-name) buffer-name)))
 
 
+;;;; Interactive add stuff
+
+(defun cmake-build-add-profile (profile-name commandline)
+  (interactive "SNew profile name: \nsCommandline: " )
+  )
+
+;;;; Menu stuff
+
 (defun cmake-build--menu-profiles ()
   `((:set-profile menu-item ,(concat "Profile: " (symbol-name cmake-build-profile))
                   (keymap nil
@@ -384,6 +405,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build--menu (&optional config)
   (let ((config (or config (car (cmake-build--get-build-config)))))
     `(keymap "CMake Build"
+             (:debug menu-item ,(concat "Debug " config) t)
              (:build menu-item ,(concat "Build " config) t)
              (:run menu-item ,(concat "Run " config) t)
              ,@(cmake-build--menu-configs)
@@ -404,6 +426,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build--menu-action-dispatch (action)
   (case (car action)
     (:info (message "Project root: %s" (cmake-build--project-root)))
+    (:debug (cmake-build-debug))
     (:build (cmake-build-current))
     (:run (cmake-build-run))
     (:set-config (cmake-build-set-config (cadr action)))
