@@ -239,11 +239,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build-run ()
   (interactive)
   ;; If we switch windows, remember what project we're building
-  (let ((cmake-build-project-root (cmake-build--project-root)))
+  (let* ((this-root (cmake-build--project-root))
+         (cmake-build-project-root this-root))
     (if cmake-build-before-run
         (cmake-build--invoke-build-current
          (lambda (process event)
-           (let ((cmake-build-project-root cmake-build-project-root))
+           (let* ((this-root this-root)
+                  (cmake-build-project-root this-root))
              (when (equalp "finished\n" event)
                (cmake-build--invoke-run)))))
       (cmake-build--invoke-run))))
