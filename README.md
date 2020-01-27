@@ -202,6 +202,24 @@ specify this in `.cmake-build.el`:
 
 This will populate the "Other targets" menu.
 
+### Out-of-tree builds
+
+You may wish to build in another location.  By default, builds happen in a profile-specific build directory in the root of the project.  You may set a new root for builds by using `M-x cmake-build-set-project-build-root` and specifying a path.  This is also available under the "Tools" menu with "Set project build root".
+
+### Alternate build directory name format
+
+By default, the build directory is named in the form `build.<profile>`.  For instance, if your profile is `gcc-debug`, the build directory is `build.gcc-debug`.
+
+If you wish to alter this, you may write a new elisp function in the following form:
+
+```elisp
+;;; This will make the build directory "gcc-debug.build" instead
+(defun my-dir-name-function (project-root profile)
+  (concat profile ".build"))
+```
+
+Note that this should be a single filename without `/` or other path.  The project root is given for convenience in case one wishes to do anything interesting based on the source (e.g., look up a VCS tag or revision).
+
 ### Custom variables
 
 A number of variables are available for customization:
@@ -223,6 +241,8 @@ A number of local settings are stored by default in your
 support "shared" custom variables (i.e., you check them into a repository), but
 "local" cmake-build.el settings.  You can exclude this file from VCS, and not
 have a dirty tree everytime you switch configurations and profiles.
+
+Note this file is similar to `custom` data and is not intended to be directly edited.  It is likely to be overwritten if you make changes.
 
 The variables are as follows:
 
