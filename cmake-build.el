@@ -112,7 +112,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (print `((:build-profile ,cmake-build-profile)
              (:build-options ,cmake-build-options)
              (:build-run-config ,cmake-build-run-config)
-             (:bulid-project-root ,cmake-build-project-root))
+             (:build-project-root ,cmake-build-project-root))
            (current-buffer))))
 
 (defun cmake-build--get-run-config-name ()
