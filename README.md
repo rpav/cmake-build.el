@@ -202,6 +202,24 @@ specify this in `.cmake-build.el`:
 
 This will populate the "Other targets" menu.
 
+
+### Projectile modeline
+
+If you want to show the current run configuration in the modeline, you could use projectile's modeline function:
+
+```elisp
+(defun projectile-custom-mode-line-function ()
+  (if-let ((name (cmake-build-get-run-config-name)))
+      (format "[%s:%s]"
+              (projectile-project-name)
+              (cmake-build-get-run-config-name))
+    (projectile-default-mode-line)))
+
+(setq projectile-mode-line-function 'projectile-custom-mode-line-function)
+```
+
+The critical call here is `(cmake-build-get-run-config-name)`.
+
 ### Out-of-tree builds
 
 You may wish to build in another location.  By default, builds happen in a profile-specific build directory in the root of the project.  You may set a new root for builds by using `M-x cmake-build-set-project-build-root` and specifying a path.  This is also available under the "Tools" menu with "Set project build root".
