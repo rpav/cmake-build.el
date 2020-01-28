@@ -132,7 +132,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
              (:build-roots ,cmake-build-build-roots))
            (current-buffer))))
 
-(defun cmake-build--get-run-config-name ()
+(defun cmake-build-get-run-config-name ()
   (when (cmake-build--project-root)
     (cdr (assoc (intern (cmake-build--project-root)) cmake-build-run-config))))
 
@@ -151,10 +151,10 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (projectile-project-name)))
 
 (defun cmake-build--build-buffer-name ()
-  (concat "*Build " (cmake-build-project-name) "/" (symbol-name cmake-build-profile) ": " (symbol-name (cmake-build--get-run-config-name)) "*"))
+  (concat "*Build " (cmake-build-project-name) "/" (symbol-name cmake-build-profile) ": " (symbol-name (cmake-build-get-run-config-name)) "*"))
 
 (defun cmake-build--run-buffer-name ()
-  (concat "*Run " (cmake-build-project-name) "/" (symbol-name cmake-build-profile) ": " (symbol-name (cmake-build--get-run-config-name)) "*"))
+  (concat "*Run " (cmake-build-project-name) "/" (symbol-name cmake-build-profile) ": " (symbol-name (cmake-build-get-run-config-name)) "*"))
 
 (defun cmake-build--get-project-data ()
   (cmake-build--read-project-data))
@@ -177,7 +177,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                 (cmake-build--get-project-data)))))
 
 (defun cmake-build--get-config (&optional config)
-  (cdr (assoc (or config (cmake-build--get-run-config-name))
+  (cdr (assoc (or config (cmake-build-get-run-config-name))
               (cmake-build--get-configs))))
 
 (defun cmake-build--get-build-config (&optional config)
@@ -307,7 +307,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
    (list
     (let* ((configs (cmake-build--get-configs))
            (choices (mapcar (lambda (x) (symbol-name (car x))) configs)))
-      (intern (ido-completing-read "CMake Config: " choices nil t nil nil (symbol-name (cmake-build--get-run-config-name)))))))
+      (intern (ido-completing-read "CMake Config: " choices nil t nil nil (symbol-name (cmake-build-get-run-config-name)))))))
   (let* ((config (cmake-build--get-config config-name)))
     (if config
         (progn
@@ -323,7 +323,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (interactive)
   (setq-local cmake-build-run-config
               (list (copy-tree
-                     (rassoc (cmake-build--get-run-config-name) cmake-build-run-config))))
+                     (rassoc (cmake-build-get-run-config-name) cmake-build-run-config))))
   (call-interactively #'cmake-build-set-config))
 
 (defun cmake-build-set-project-root (path)
@@ -436,8 +436,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                                     (cmake-build--get-cmake-profiles))))))
 
 (defun cmake-build--menu-configs ()
-  (let ((config (cmake-build--get-build-config (cmake-build--get-run-config-name)))
-        (name (symbol-name (cmake-build--get-run-config-name))))
+  (let ((config (cmake-build--get-build-config (cmake-build-get-run-config-name)))
+        (name (symbol-name (cmake-build-get-run-config-name))))
     `((:set-config menu-item ,(concat "Config: "
                                       (if config name "<none selected>"))
                    (keymap nil
@@ -491,7 +491,6 @@ use Projectile to determine the root on a buffer-local basis, instead.")
    `(keymap "CMake Build: Settings" ,@(cmake-build--menu-settings))))
 
 (defun cmake-build--menu-action-dispatch (action)
-  (message "action %s" action)
   (case (car action)
     (:info (message "Project root: %s" (cmake-build--project-root)))
     (:debug (cmake-build-debug))
