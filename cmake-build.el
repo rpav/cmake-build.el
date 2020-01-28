@@ -150,7 +150,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (let ((default-directory (cmake-build--project-root)))
     (projectile-project-name)))
 
-(defun cmake-build--build-buffer-name ()
+(defun cmake-build--build-buffer-name (&optional name)
   (concat "*Build " (cmake-build-project-name) "/" (symbol-name cmake-build-profile) ": " (symbol-name (cmake-build-get-run-config-name)) "*"))
 
 (defun cmake-build--run-buffer-name ()
@@ -233,22 +233,22 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (config (cmake-build--get-build-config))
            (command (concat "cmake --build . " cmake-build-options " --target " (car config)))
            (buffer-name (cmake-build--build-buffer-name))
-           (other-buffer-name (cmake-build--run-buffer-name))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
-      (cmake-build--split-to-buffer buffer-name other-buffer-name)
+           (other-buffer-name (cmake-build--run-buffer-name)))
+      ;; set the compilation buffer name to current project build-buffer-name
+      (setq compilation-buffer-name-function 'cmake-build--build-buffer-name)
       (if (get-buffer-process buffer-name)
           (message "Already building %s/%s"
                    (projectile-project-name)
                    (symbol-name cmake-build-profile))
         (save-some-buffers 1)
-        (async-shell-command (concat "time " command) buffer-name)
-        (when sentinel
-          (let ((process (get-buffer-process buffer-name)))
-            (when (process-live-p process)
-              (set-process-sentinel process sentinel))))
-        (with-current-buffer buffer-name
-          (visual-line-mode t))))))
+        ;; calls compile which return the buffer name
+	(let ((buffer-name (compile  (concat "time " command))))
+	  (when sentinel
+            (let ((process (get-buffer-process buffer-name)))
+              (when (process-live-p process)
+		(set-process-sentinel process sentinel))))
+          (with-current-buffer buffer-name
+            (visual-line-mode t)))))))
 
 (defun cmake-build-current ()
   (interactive)
@@ -401,23 +401,18 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (interactive)
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
-           (buffer-name (cmake-build--build-buffer-name))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
+           (buffer-name (cmake-build--build-buffer-name)))
       (save-some-buffers t)
-      (cmake-build--split-to-buffer buffer-name (cmake-build--run-buffer-name))
-      (async-shell-command "cmake --build . --target clean" buffer-name))))
+      (compile "cmake --build . --target clean" ))))
 
 (defun cmake-build-other-target (target-name)
   (interactive "sTarget: ")
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
-           (buffer-name (cmake-build--build-buffer-name))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
+           (buffer-name (cmake-build--build-buffer-name)))
       (save-some-buffers t)
-      (cmake-build--split-to-buffer buffer-name (cmake-build--run-buffer-name))
-      (async-shell-command (concat "cmake --build . --target " target-name) buffer-name))))
+      (setq compilation-buffer-name-function 'cmake-build--build-buffer-name)
+      (compile (concat "cmake --build . --target " target-name)))))
 
 
 ;;;; Interactive add stuff
