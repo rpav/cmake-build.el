@@ -47,6 +47,24 @@ passed to cmake, and the current config."
   :type 'integer
   :group 'cmake-build)
 
+(defcustom cmake-build-split-threshold 40.0
+  "Threshold (percentage) at which to *not* split the current window,
+but instead use the other window.  That is, if `cmake-build-run-window-size`
+is greater than this percentage of the current window, it will not be split."
+  :type 'float
+  :group 'cmake-build)
+
+(defcustom cmake-build-never-split nil
+  "Never split the window, instead always use the other window."
+  :type 'boolean
+  :group 'cmake-build)
+
+(defcustom cmake-build-switch-to-build nil
+  "If non-NIL, switch to the build window when cmake-build-current is invoked.
+Otherwise, leave the current window active"
+  :type 'boolean
+  :group 'cmake-build)
+
 (defcustom cmake-build-external-term-command "xterm -e %s"
   "NOT CURRENTLY USED.  External terminal for build/run.  This is
 used as a format string, where '%s' will inject the build
@@ -150,7 +168,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (let ((default-directory (cmake-build--project-root)))
     (projectile-project-name)))
 
-(defun cmake-build--build-buffer-name ()
+(defun cmake-build--build-buffer-name (&optional name)
   (concat "*Build " (cmake-build-project-name) "/" (symbol-name cmake-build-profile) ": " (symbol-name (cmake-build-get-run-config-name)) "*"))
 
 (defun cmake-build--run-buffer-name ()
@@ -212,20 +230,54 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build--get-run-command (config)
   (concat (cadr config) " " (caddr config)))
 
-(defun cmake-build--split-to-buffer (name other-name)
-  (let ((other-buffer-window (get-buffer-window other-name t)))
-    (if (and cmake-build-run-window-autoswitch
-             other-buffer-window)
-        (progn
-          (set-window-dedicated-p other-buffer-window nil)
-          (set-window-buffer other-buffer-window
-                             (get-buffer-create name))
-          (set-window-dedicated-p other-buffer-window t))
-      (when (and (not other-buffer-window)
-                 (not (get-buffer-window name t)))
-        (let ((window (split-window-below (- cmake-build-run-window-size))))
-          (set-window-buffer window (get-buffer-create name))
-          (set-window-dedicated-p window t))))))
+(defun cmake-build--split-to-buffer (name &optional other-name)
+  (let ((current-buffer-window (get-buffer-window))
+        (other-buffer-window (and other-name (get-buffer-window other-name t))))
+    (unless (or cmake-build-never-split
+                (> cmake-build-run-window-size
+                   (* (/ cmake-build-split-threshold 100.0)
+                      (window-total-height current-buffer-window))))
+      (if (and cmake-build-run-window-autoswitch
+               other-buffer-window)
+          (progn
+            (set-window-dedicated-p other-buffer-window nil)
+            (set-window-buffer other-buffer-window
+                               (get-buffer-create name))
+            (set-window-dedicated-p other-buffer-window t))
+        (when (and (not other-buffer-window)
+                   (not (get-buffer-window name t)))
+          (let ((window (split-window-below (- cmake-build-run-window-size))))
+            (set-window-buffer window (get-buffer-create name))
+            (set-window-dedicated-p window t)))))))
+
+(cl-defun cmake-build--compile (buffer-name command &key sentinel other-buffer-name)
+  (let ((display-buffer-alist
+         ;; Suppress the window only if we actually split
+         (if (cmake-build--split-to-buffer buffer-name other-buffer-name)
+             (cons (list buffer-name #'display-buffer-no-window)
+                   display-buffer-alist)
+           display-buffer-alist)))
+    (if (get-buffer-process buffer-name)
+        (message "Already building %s/%s"
+                 (projectile-project-name)
+                 (symbol-name cmake-build-profile))
+      ;; compile saves buffers; rely on this now
+      (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name)
+             (compilation-scroll-output t))
+        (cl-flet ((run-compile () (compile (concat "time " command) t)))
+          (if-let ((w (get-buffer-window buffer-name t)))
+              (if cmake-build-switch-to-build
+                  (progn
+                    (switch-to-buffer-other-window buffer-name)
+                    (run-compile))
+                (with-selected-window w
+                  (run-compile)))
+            (run-compile)))
+        (when sentinel
+          (let ((process (get-buffer-process buffer-name)))
+            (when (process-live-p process)
+              (set-process-sentinel process sentinel))))
+        (visual-line-mode t)))))
 
 (defun cmake-build--invoke-build-current (&optional sentinel)
   (cmake-build--save-project-root ()
@@ -233,26 +285,14 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (config (cmake-build--get-build-config))
            (command (concat "cmake --build . " cmake-build-options " --target " (car config)))
            (buffer-name (cmake-build--build-buffer-name))
-           (other-buffer-name (cmake-build--run-buffer-name))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
-      (cmake-build--split-to-buffer buffer-name other-buffer-name)
-      (if (get-buffer-process buffer-name)
-          (message "Already building %s/%s"
-                   (projectile-project-name)
-                   (symbol-name cmake-build-profile))
-        (save-some-buffers 1)
-        (async-shell-command (concat "time " command) buffer-name)
-        (when sentinel
-          (let ((process (get-buffer-process buffer-name)))
-            (when (process-live-p process)
-              (set-process-sentinel process sentinel))))
-        (with-current-buffer buffer-name
-          (visual-line-mode t))))))
+           (other-buffer-name (cmake-build--run-buffer-name)))
+      (cmake-build--compile buffer-name command
+                            :sentinel sentinel :other-buffer-name other-buffer-name))))
 
 (defun cmake-build-current ()
   (interactive)
   (cmake-build--invoke-build-current))
+
 
 (defun cmake-build--invoke-run ()
   (cmake-build--save-project-root ()
@@ -265,9 +305,11 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                                  process-environment))
            (buffer-name (cmake-build--run-buffer-name))
            (other-buffer-name (cmake-build--build-buffer-name))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
-      (cmake-build--split-to-buffer buffer-name other-buffer-name)
+           (display-buffer-alist
+            (if (cmake-build--split-to-buffer buffer-name other-buffer-name)
+                (cons (list buffer-name #'display-buffer-no-window)
+                      display-buffer-alist)
+              display-buffer-alist)))
       (if (get-buffer-process buffer-name)
           (message "Already running %s/%s"
                    (projectile-project-name)
@@ -368,14 +410,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build-run-cmake ()
   (interactive)
   (let* ((default-directory (cmake-build--get-build-dir))
-         (buffer-name (cmake-build--build-buffer-name))
-         (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                     display-buffer-alist)))
-    (save-some-buffers t)
-    (cmake-build--split-to-buffer buffer-name (cmake-build--run-buffer-name))
-    (async-shell-command "cmake ." buffer-name)
-    (with-current-buffer buffer-name
-      (visual-line-mode t))))
+         (buffer-name (cmake-build--build-buffer-name)))
+    (cmake-build--compile buffer-name "cmake .")))
 
 (defun cmake-build-clear-cache-and-configure ()
   (interactive)
@@ -386,45 +422,25 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (buffer-name (cmake-build--build-buffer-name))
            (command (concat "cmake " (cmake-build--get-cmake-options)
                             " " (car (cmake-build--get-profile))
-                            " " (cmake-build--project-root)))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
-      (save-some-buffers t)
-      (cmake-build--split-to-buffer buffer-name (cmake-build--run-buffer-name))
+                            " " (cmake-build--project-root))))
       (when (file-exists-p "CMakeCache.txt")
         (delete-file "CMakeCache.txt"))
-      (async-shell-command command buffer-name)
-      (with-current-buffer buffer-name
-        (visual-line-mode t)))))
+      (cmake-build--compile buffer-name command))))
 
 (defun cmake-build-clean ()
   (interactive)
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
-           (buffer-name (cmake-build--build-buffer-name))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
-      (save-some-buffers t)
-      (cmake-build--split-to-buffer buffer-name (cmake-build--run-buffer-name))
-      (async-shell-command "cmake --build . --target clean" buffer-name))))
+           (buffer-name (cmake-build--build-buffer-name)))
+      (cmake-build--compile buffer-name "cmake --build . --target clean"))))
 
 (defun cmake-build-other-target (target-name)
   (interactive "sTarget: ")
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
-           (buffer-name (cmake-build--build-buffer-name))
-           (display-buffer-alist (cons (list buffer-name #'display-buffer-no-window)
-                                       display-buffer-alist)))
-      (save-some-buffers t)
-      (cmake-build--split-to-buffer buffer-name (cmake-build--run-buffer-name))
-      (async-shell-command (concat "cmake --build . --target " target-name) buffer-name))))
+           (buffer-name (cmake-build--build-buffer-name)))
+      (cmake-build--compile buffer-name (concat "cmake --build . --target " target-name)))))
 
-
-;;;; Interactive add stuff
-
-(defun cmake-build-add-profile (profile-name commandline)
-  (interactive "SNew profile name: \nsCommandline: " )
-  )
 
 ;;;; Menu stuff
 
