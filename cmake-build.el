@@ -231,12 +231,16 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (concat (cadr config) " " (caddr config)))
 
 (defun cmake-build--split-to-buffer (name &optional other-name)
-  (let ((current-buffer-window (get-buffer-window))
-        (other-buffer-window (and other-name (get-buffer-window other-name t))))
-    (unless (or cmake-build-never-split
-                (> cmake-build-run-window-size
-                   (* (/ cmake-build-split-threshold 100.0)
-                      (window-total-height current-buffer-window))))
+  (let* ((current-buffer-window (get-buffer-window))
+         (new-buffer-window (get-buffer-window name))
+         (other-buffer-window (and other-name (get-buffer-window other-name t)))
+         (split-is-current (or (eql current-buffer-window new-buffer-window)
+                               (eql current-buffer-window other-buffer-window))))
+    (when (or (not cmake-build-never-split)
+              split-is-current
+              (> cmake-build-run-window-size
+                 (* (/ cmake-build-split-threshold 100.0)
+                    (window-total-height current-buffer-window))))
       (if (and cmake-build-run-window-autoswitch
                other-buffer-window)
           (progn
@@ -248,15 +252,17 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                    (not (get-buffer-window name t)))
           (let ((window (split-window-below (- cmake-build-run-window-size))))
             (set-window-buffer window (get-buffer-create name))
-            (set-window-dedicated-p window t)))))))
+            (set-window-dedicated-p window t))))
+      t)))
 
 (cl-defun cmake-build--compile (buffer-name command &key sentinel other-buffer-name)
-  (let ((display-buffer-alist
-         ;; Suppress the window only if we actually split
-         (if (cmake-build--split-to-buffer buffer-name other-buffer-name)
-             (cons (list buffer-name #'display-buffer-no-window)
-                   display-buffer-alist)
-           display-buffer-alist)))
+  (let* ((did-split (cmake-build--split-to-buffer buffer-name other-buffer-name))
+         (display-buffer-alist
+          ;; Suppress the window only if we actually split
+          (if did-split
+              (cons (list buffer-name #'display-buffer-no-window)
+                    display-buffer-alist)
+            display-buffer-alist)))
     (if (get-buffer-process buffer-name)
         (message "Already building %s/%s"
                  (projectile-project-name)
@@ -265,14 +271,15 @@ use Projectile to determine the root on a buffer-local basis, instead.")
       (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name)
              (compilation-scroll-output t))
         (cl-flet ((run-compile () (compile (concat "time " command) t)))
-          (if-let ((w (get-buffer-window buffer-name t)))
-              (if cmake-build-switch-to-build
-                  (progn
-                    (switch-to-buffer-other-window buffer-name)
-                    (run-compile))
-                (with-selected-window w
-                  (run-compile)))
-            (run-compile)))
+          (let ((w (get-buffer-window buffer-name t)))
+            (if (not (eql (get-buffer-window) w))
+                (if cmake-build-switch-to-build
+                    (progn
+                      (switch-to-buffer-other-window buffer-name)
+                      (run-compile))
+                  (with-selected-window w
+                    (run-compile)))
+              (run-compile))))
         (when sentinel
           (let ((process (get-buffer-process buffer-name)))
             (when (process-live-p process)
