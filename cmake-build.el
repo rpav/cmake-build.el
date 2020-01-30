@@ -265,18 +265,21 @@ use Projectile to determine the root on a buffer-local basis, instead.")
       t)))
 
 (cl-defun cmake-build--compile (buffer-name command &key sentinel other-buffer-name)
-  (let* ((did-split (cmake-build--split-to-buffer buffer-name other-buffer-name))
-         (display-buffer-alist
-          ;; Suppress the window only if we actually split
-          (if did-split
-              (cons (list buffer-name #'display-buffer-no-window)
-                    display-buffer-alist)
-            display-buffer-alist)))
-    (if (get-buffer-process buffer-name)
-        (message "Already building %s/%s"
-                 (projectile-project-name)
-                 (symbol-name cmake-build-profile))
-      ;; compile saves buffers; rely on this now
+  (if (get-buffer-process buffer-name)
+      (message "Already building %s/%s"
+               (projectile-project-name)
+               (symbol-name cmake-build-profile))
+    ;; close buffer, to reevaluate default dir, if dir-name has changed
+    (if  (and (char-or-string-p buffer-name) (not (eq nil (get-buffer buffer-name))))
+        (kill-buffer buffer-name)
+      )
+    (let* ((did-split (cmake-build--split-to-buffer buffer-name other-buffer-name))
+           (display-buffer-alist
+            ;; Suppress the window only if we actually split
+            (if did-split
+                (cons (list buffer-name #'display-buffer-no-window)
+                      display-buffer-alist)
+              display-buffer-alist)))
       (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name))
         (cl-flet ((run-compile () (compile (concat "time " command) t)))
           (let ((w (get-buffer-window buffer-name t)))
