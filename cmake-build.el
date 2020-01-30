@@ -284,7 +284,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
           (let ((process (get-buffer-process buffer-name)))
             (when (process-live-p process)
               (set-process-sentinel process sentinel))))
-        (visual-line-mode t)))))
+        (with-current-buffer buffer-name
+          (visual-line-mode t))))))
 
 (defun cmake-build--invoke-build-current (&optional sentinel)
   (cmake-build--save-project-root ()
