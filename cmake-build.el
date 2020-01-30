@@ -446,7 +446,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
            (buffer-name (cmake-build--build-buffer-name)))
-      (cmake-build--compile buffer-name (concat "cmake --build . --target " target-name)))))
+      (cmake-build--compile buffer-name (concat "cmake --build . " cmake-build-options " --target " target-name)))))
 
 
 ;;;; Menu stuff
