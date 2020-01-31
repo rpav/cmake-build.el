@@ -271,7 +271,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
       (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name))
         (cl-flet ((run-compile () (compile (concat "time " command) t)))
           (let ((w (get-buffer-window buffer-name t)))
-            (if (not (eql (get-buffer-window) w))
+            (if (and w (not (eql (get-buffer-window) w)))
                 (if cmake-build-switch-to-build
                     (progn
                       (switch-to-buffer-other-window buffer-name)
