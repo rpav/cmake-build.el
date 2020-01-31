@@ -278,15 +278,16 @@ use Projectile to determine the root on a buffer-local basis, instead.")
       ;; compile saves buffers; rely on this now
       (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name))
         (cl-flet ((run-compile () (compile (concat "time " command) t)))
-          (let ((w (get-buffer-window buffer-name t)))
-            (if (not (eql (get-buffer-window) w))
-                (if cmake-build-switch-to-build
-                    (progn
-                      (switch-to-buffer-other-window buffer-name)
-                      (run-compile))
-                  (with-selected-window w
-                    (run-compile)))
-              (run-compile))))
+          (run-compile))
+        ;; (let ((w (get-buffer-window buffer-name t)))
+        ;;   (if (not (eql (get-buffer-window) w))
+        ;;       (if cmake-build-switch-to-build
+        ;;           (progn
+        ;;             (switch-to-buffer-other-window buffer-name)
+        ;;             (run-compile))
+        ;;         (with-selected-window w
+        ;;           (run-compile)))
+        ;;     (run-compile)))
         (when sentinel
           (let ((process (get-buffer-process buffer-name)))
             (when (process-live-p process)
