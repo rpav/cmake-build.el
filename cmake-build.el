@@ -21,6 +21,7 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (require 'cl)
+(require 'tramp)
 
 (defgroup cmake-build ()
   "Use CMake to build projects and run targets based on configurations"
