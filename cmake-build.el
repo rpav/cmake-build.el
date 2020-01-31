@@ -117,6 +117,14 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (or cmake-build-project-root
       (projectile-project-root)))
 
+(defun cmake-build--maybe-remote-project-root ()
+  "Return current project root path, suitable for remote invocations too."
+  (let ((project-root (cmake-build--project-root)))
+    (if (tramp-tramp-file-p project-root)
+        (let ((parsed-root (tramp-dissect-file-name project-root)))
+          (tramp-file-name-localname parsed-root))
+      project-root)))
+
 (cl-defmacro cmake-build--save-project-root (nil &body body)
   (declare (indent 1))
   `(let ((cmake-build-project-root (cmake-build--project-root)))
@@ -307,7 +315,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (command (cmake-build--get-run-command config))
            (default-directory (cmake-build--get-build-dir (car config)))
            (process-environment (append
-                                 (list (concat "PROJECT_ROOT=" (cmake-build--project-root)))
+                                 (list (concat "PROJECT_ROOT="
+                                               (cmake-build--maybe-remote-project-root)))
                                  (cmake-build--get-run-config-env)
                                  process-environment))
            (buffer-name (cmake-build--run-buffer-name))
@@ -429,7 +438,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (buffer-name (cmake-build--build-buffer-name))
            (command (concat "cmake " (cmake-build--get-cmake-options)
                             " " (car (cmake-build--get-profile))
-                            " " (cmake-build--project-root))))
+                            " " (cmake-build--maybe-remote-project-root))))
       (when (file-exists-p "CMakeCache.txt")
         (delete-file "CMakeCache.txt"))
       (cmake-build--compile buffer-name command))))
