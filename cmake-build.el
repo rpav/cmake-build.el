@@ -269,6 +269,11 @@ use Projectile to determine the root on a buffer-local basis, instead.")
       (message "Already building %s/%s"
                (projectile-project-name)
                (symbol-name cmake-build-profile))
+
+;    (with-current-buffer buffer-name
+;      (setq-local compilation-directory actual-directory)
+;      (setq-local default-directory actual-directory))
+    
     ;; close buffer, to reevaluate default dir, if dir-name has changed
     (if  (and (char-or-string-p buffer-name) (not (eq nil (get-buffer buffer-name))))
         (kill-buffer buffer-name)
@@ -279,7 +284,9 @@ use Projectile to determine the root on a buffer-local basis, instead.")
             (if did-split
                 (cons (list buffer-name #'display-buffer-no-window)
                       display-buffer-alist)
-              display-buffer-alist)))
+              display-buffer-alist))
+					;	   (actual-directory default-directory))
+	   )
       (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name))
         (cl-flet ((run-compile () (compile (concat "time " command) t)))
           (let ((w (get-buffer-window buffer-name t)))
