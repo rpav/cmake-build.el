@@ -240,7 +240,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (concat (cadr config) " " (caddr config)))
 
 (defun cmake-build--split-to-buffer (name &optional other-name)
-  (let* ((current-buffer-window (get-buffer-window))
+  (let* ((window-point-insertion-type t)
+         (current-buffer-window (get-buffer-window))
          (new-buffer-window (get-buffer-window name))
          (other-buffer-window (and other-name (get-buffer-window other-name t)))
          (split-is-current (or (eql current-buffer-window new-buffer-window)
@@ -282,7 +283,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
         (setq-local default-directory actual-directory))
       ;; compile saves buffers; rely on this now
       (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name))
-        (cl-flet ((run-compile () (compile (concat "time " command) t)))
+        (cl-flet ((run-compile () (compile (concat "time " command))))
           (let ((w (get-buffer-window buffer-name t)))
             (if (and w (not (eql (get-buffer-window) w)))
                 (if cmake-build-switch-to-build
@@ -300,7 +301,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                                       (funcall sentinel p e)
                                       (compilation-sentinel p e))))))
         (with-current-buffer buffer-name
-          (visual-line-mode t))))))
+          (set-window-point (get-buffer-window) (point-max))
+          (visual-line-mode 1))))))
 
 (defun cmake-build--invoke-build-current (&optional sentinel)
   (cmake-build--save-project-root ()
