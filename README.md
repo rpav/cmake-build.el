@@ -283,5 +283,5 @@ The variables are as follows:
 
 ## Credits
 
-- @tlyr: [initial implementation](https://github.com/dlyr/cmake-build.el/tree/vanilla-compile) of COMPILE, used as a reference, contribs
+- @dlyr: [initial implementation](https://github.com/dlyr/cmake-build.el/tree/vanilla-compile) of COMPILE, used as a reference, contribs
 - @laurynas-biveinis: General testing, correctness, contribs
