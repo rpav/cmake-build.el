@@ -291,7 +291,10 @@ use Projectile to determine the root on a buffer-local basis, instead.")
         (when sentinel
           (let ((process (get-buffer-process buffer-name)))
             (when (process-live-p process)
-              (set-process-sentinel process sentinel))))
+              (set-process-sentinel process
+                                    (lambda (p e)
+                                      (funcall sentinel p e)
+                                      (compilation-sentinel p e))))))
         (with-current-buffer buffer-name
           (visual-line-mode t))))))
 
