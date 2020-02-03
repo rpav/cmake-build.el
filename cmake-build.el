@@ -1,7 +1,7 @@
 ;;; -*- lexical-binding: t; -*-
 ;;; cmake-build.el --- Handle cmake build profiles and target/run configurations for projects
 
-;; Copyright (C) 2019  Ryan Pavlik
+;; Copyright (C) 2019-2020  Ryan Pavlik
 
 ;; Author: Ryan Pavlik <rpavlik@gmail.com>
 ;; URL: https://github.com/rpav/cmake-build.el
