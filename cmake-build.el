@@ -301,7 +301,9 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                                       (funcall sentinel p e)
                                       (compilation-sentinel p e))))))
         (with-current-buffer buffer-name
-          (set-window-point (get-buffer-window) (point-max))
+          (mapcar (lambda (w)
+                    (set-window-point w (point-max)))
+                  (get-buffer-window-list buffer-name nil t))
           (visual-line-mode 1))))))
 
 (defun cmake-build--invoke-build-current (&optional sentinel)
