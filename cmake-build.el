@@ -465,7 +465,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build-other-target (target-name)
   (interactive
    (list
-    (completing-read "sTarget: " (cmake-build--get-available-targets))))
+    (completing-read "Target: " (cmake-build--get-available-targets))))
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
            (buffer-name (cmake-build--build-buffer-name)))
