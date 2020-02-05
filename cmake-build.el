@@ -173,6 +173,16 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (setf (alist-get (intern (cmake-build--project-root)) cmake-build-build-roots)
           path)))
 
+(defun cmake-build--valid-p ()
+  (not (null (cmake-build--get-project-data))))
+
+(defun cmake-build--validate (&optional tag)
+  (if (cmake-build--valid-p) t
+    (message "cmake-build %s: Not a valid project; no .cmake-build.el data found (project root is %s)"
+             (or tag "compile")
+             (cmake-build--project-root))
+    nil))
+
 (defun cmake-build-project-name ()
   (let ((default-directory (cmake-build--project-root)))
     (projectile-project-name)))
@@ -307,14 +317,15 @@ use Projectile to determine the root on a buffer-local basis, instead.")
           (visual-line-mode 1))))))
 
 (defun cmake-build--invoke-build-current (&optional sentinel)
-  (cmake-build--save-project-root ()
-    (let* ((default-directory (cmake-build--get-build-dir))
-           (config (cmake-build--get-build-config))
-           (command (concat "cmake --build . " cmake-build-options " --target " (car config)))
-           (buffer-name (cmake-build--build-buffer-name))
-           (other-buffer-name (cmake-build--run-buffer-name)))
-      (cmake-build--compile buffer-name command
-                            :sentinel sentinel :other-buffer-name other-buffer-name))))
+  (when (cmake-build--validate)
+    (cmake-build--save-project-root ()
+      (let* ((default-directory (cmake-build--get-build-dir))
+             (config (cmake-build--get-build-config))
+             (command (concat "cmake --build . " cmake-build-options " --target " (car config)))
+             (buffer-name (cmake-build--build-buffer-name))
+             (other-buffer-name (cmake-build--run-buffer-name)))
+        (cmake-build--compile buffer-name command
+                              :sentinel sentinel :other-buffer-name other-buffer-name)))))
 
 (defun cmake-build-current ()
   (interactive)
@@ -347,16 +358,17 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build-run ()
   (interactive)
   ;; If we switch windows, remember what project we're building
-  (let* ((this-root (cmake-build--project-root))
-         (cmake-build-project-root this-root))
-    (if cmake-build-before-run
-        (cmake-build--invoke-build-current
-         (lambda (process event)
-           (let* ((this-root this-root)
-                  (cmake-build-project-root this-root))
-             (when (equalp "finished\n" event)
-               (cmake-build--invoke-run)))))
-      (cmake-build--invoke-run))))
+  (when (cmake-build--validate "run")
+   (let* ((this-root (cmake-build--project-root))
+          (cmake-build-project-root this-root))
+     (if cmake-build-before-run
+         (cmake-build--invoke-build-current
+          (lambda (process event)
+            (let* ((this-root this-root)
+                   (cmake-build-project-root this-root))
+              (when (equalp "finished\n" event)
+                (cmake-build--invoke-run)))))
+       (cmake-build--invoke-run)))))
 
 (defun cmake-build-debug ()
   (interactive)
