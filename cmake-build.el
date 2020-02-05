@@ -174,7 +174,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
           path)))
 
 (defun cmake-build--valid-p ()
-  (not (null (cmake-build--get-project-data))))
+  (and (cmake-build--project-root)
+       (not (null (cmake-build--get-project-data)))))
 
 (defun cmake-build--validate (&optional tag)
   (if (cmake-build--valid-p) t
