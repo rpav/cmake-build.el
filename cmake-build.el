@@ -259,11 +259,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
          (other-buffer-window (and other-name (get-buffer-window other-name t)))
          (split-is-current (or (eql current-buffer-window new-buffer-window)
                                (eql current-buffer-window other-buffer-window))))
-    (when (and (not cmake-build-never-split)
-               (not split-is-current)
-               (<= cmake-build-run-window-size
-                   (* (/ cmake-build-split-threshold 100.0)
-                      (window-total-height current-buffer-window))))
+    (when (or (and other-buffer-window
+                   cmake-build-run-window-autoswitch)
+              (and (not cmake-build-never-split)
+                   (not split-is-current)
+                   (<= cmake-build-run-window-size
+                       (* (/ cmake-build-split-threshold 100.0)
+                          (window-total-height current-buffer-window)))))
       (if (and cmake-build-run-window-autoswitch
                other-buffer-window)
           (progn
