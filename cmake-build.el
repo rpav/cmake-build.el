@@ -252,27 +252,28 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 
 (defun cmake-build--split-to-buffer (name &optional other-name)
   (let* ((window-point-insertion-type t)
+         ;; Make sure we have a buffer created regardless
+         (buffer (get-buffer-create name))
          (current-buffer-window (get-buffer-window))
          (new-buffer-window (get-buffer-window name))
          (other-buffer-window (and other-name (get-buffer-window other-name t)))
          (split-is-current (or (eql current-buffer-window new-buffer-window)
                                (eql current-buffer-window other-buffer-window))))
-    (when (or (not cmake-build-never-split)
-              split-is-current
-              (> cmake-build-run-window-size
-                 (* (/ cmake-build-split-threshold 100.0)
-                    (window-total-height current-buffer-window))))
+    (when (and (not cmake-build-never-split)
+               (not split-is-current)
+               (<= cmake-build-run-window-size
+                   (* (/ cmake-build-split-threshold 100.0)
+                      (window-total-height current-buffer-window))))
       (if (and cmake-build-run-window-autoswitch
                other-buffer-window)
           (progn
             (set-window-dedicated-p other-buffer-window nil)
-            (set-window-buffer other-buffer-window
-                               (get-buffer-create name))
+            (set-window-buffer other-buffer-window buffer)
             (set-window-dedicated-p other-buffer-window t))
         (when (and (not other-buffer-window)
                    (not (get-buffer-window name t)))
           (let ((window (split-window-below (- cmake-build-run-window-size))))
-            (set-window-buffer window (get-buffer-create name))
+            (set-window-buffer window buffer)
             (set-window-dedicated-p window t))))
       t)))
 
@@ -492,6 +493,15 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (buffer-name (cmake-build--build-buffer-name)))
       (cmake-build--compile buffer-name (concat "cmake --build . " cmake-build-options " --target " target-name)))))
 
+
+(defun cmake-build-delete-current-windows ()
+  "Delete the compile/run windows for the current run configuration"
+  (interactive)
+  (cl-flet ((f (name)
+               (when-let ((b (get-buffer name)))
+                 (mapcar #'delete-window (get-buffer-window-list b nil t)))))
+    (f (cmake-build--build-buffer-name))
+    (f (cmake-build--run-buffer-name))))
 
 ;;;; Menu stuff
 
