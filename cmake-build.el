@@ -296,7 +296,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
         (setq-local compilation-directory actual-directory)
         (setq-local default-directory actual-directory))
       ;; compile saves buffers; rely on this now
-      (let* ((compilation-buffer-name-function #'cmake-build--build-buffer-name))
+      (let* ((compilation-buffer-name-function (lambda (&rest r) buffer-name)))
         (cl-flet ((run-compile () (compile (concat "time " command))))
           (let ((w (get-buffer-window buffer-name t)))
             (if (and w (not (eql (get-buffer-window) w)))
