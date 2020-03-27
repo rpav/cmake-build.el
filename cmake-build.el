@@ -418,7 +418,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (let* ((default-directory (cmake-build--project-root)))
       (read-directory-name "CMake Build project root (blank to unset): "))))
   (message "Path: %s" path)
-  (setq cmake-build-project-root (if (equal path "") nil path)))
+  (setq cmake-build-project-root (if (string= path "") nil path)))
 
 (defun cmake-build-set-project-build-root (path)
   (interactive
@@ -545,7 +545,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                  (:nuke menu-item "Delete cache/Re-run cmake" t)
                  (:set-buffer-local menu-item "Set buffer-local run config" t)
                  (:set-options menu-item "Set cmake options" t)
-                 (:set-build-root menu-item "Set project build root" t)))))
+                 (:set-root menu-item "Set project SOURCE root" t)
+                 (:set-build-root menu-item "Set project BUILD root" t)))))
 
 
 (defun cmake-build--menu (&optional config)
@@ -583,6 +584,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (:nuke (cmake-build-clear-cache-and-configure))
     (:set-options (call-interactively #'cmake-build-set-options))
     (:set-buffer-local (cmake-build-set-buffer-local-config))
+    (:set-root (call-interactively #'cmake-build-set-project-root))
     (:set-build-root (call-interactively #'cmake-build-set-project-build-root))))
 
 (defun cmake-build-menu ()
