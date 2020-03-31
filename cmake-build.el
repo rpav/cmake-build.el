@@ -120,11 +120,14 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 
 (defun cmake-build--maybe-remote-project-root ()
   "Return current project root path, suitable for remote invocations too."
-  (let ((project-root (cmake-build--project-root)))
-    (if (tramp-tramp-file-p project-root)
-        (let ((parsed-root (tramp-dissect-file-name project-root)))
-          (tramp-file-name-localname parsed-root))
-      project-root)))
+  (let* ((project-root-raw (cmake-build--project-root))
+         (project-root
+          (file-name-as-directory
+           (if (tramp-tramp-file-p project-root-raw)
+               (let ((parsed-root (tramp-dissect-file-name project-root-raw)))
+                 (tramp-file-name-localname parsed-root))
+             project-root-raw))))
+    (concat project-root (or (cmake-build--source-root) ""))))
 
 (cl-defmacro cmake-build--save-project-root (nil &body body)
   (declare (indent 1))
@@ -173,16 +176,25 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (setf (alist-get (intern (cmake-build--project-root)) cmake-build-build-roots)
           path)))
 
-(defun cmake-build--valid-p ()
-  (and (cmake-build--project-root)
-       (not (null (cmake-build--get-project-data)))))
+(defun cmake-build--validity ()
+  (cond
+   ((not (cmake-build--project-root)) :data-missing)
+   ((not (file-directory-p (cmake-build--get-build-dir))) :build-dir-missing)
+   ((null (cmake-build--get-project-data)) :data-missing)
+   (t t)))
 
 (defun cmake-build--validate (&optional tag)
-  (if (cmake-build--valid-p) t
-    (message "cmake-build %s: Not a valid project; no .cmake-build.el data found (project root is %s)"
-             (or tag "compile")
-             (cmake-build--project-root))
-    nil))
+  (not
+   (case (cmake-build--validity)
+     (:build-dir-missing
+      (message "cmake-build %s: No build dir (%s)\nDo you need to initialize CMake?"
+               (or tag "compile")
+               (cmake-build--get-build-dir)))
+     (:data-missing
+      (message "cmake-build %s: Not a valid project; no .cmake-build.el data found (project root is %s)"
+               (or tag "compile")
+               (cmake-build--project-root)))
+     (t nil))))
 
 (defun cmake-build-project-name ()
   (let ((default-directory (cmake-build--project-root)))
@@ -237,6 +249,9 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (or (cdr (assoc (intern (cmake-build--project-root)) cmake-build-build-roots))
       (cmake-build--project-root)))
 
+(defun cmake-build--source-root ()
+  (cadr (assoc 'cmake-build-source-root (cmake-build--get-project-data))))
+
 (defun cmake-build-default-build-dir-function (project-root profile)
   (concat "build." profile))
 
@@ -246,6 +261,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                    (cmake-build--project-root)
                    (symbol-name cmake-build-profile))
           "/" (or subdir "")))
+
+(defun cmake-build--check-build-dir ()
+  (let ((path (cmake-build--get-build-dir)))
+   (if (file-directory-p path)
+       t
+     (message "Build directory doesn't exist: %s\nDo you need to initialize CMake?" path)
+     nil)))
 
 (defun cmake-build--get-run-command (config)
   (concat (cadr config) " " (caddr config)))
@@ -363,16 +385,16 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (interactive)
   ;; If we switch windows, remember what project we're building
   (when (cmake-build--validate "run")
-   (let* ((this-root (cmake-build--project-root))
-          (cmake-build-project-root this-root))
-     (if cmake-build-before-run
-         (cmake-build--invoke-build-current
-          (lambda (process event)
-            (let* ((this-root this-root)
-                   (cmake-build-project-root this-root))
-              (when (equalp "finished\n" event)
-                (cmake-build--invoke-run)))))
-       (cmake-build--invoke-run)))))
+    (let* ((this-root (cmake-build--project-root))
+           (cmake-build-project-root this-root))
+      (if cmake-build-before-run
+          (cmake-build--invoke-build-current
+           (lambda (process event)
+             (let* ((this-root this-root)
+                    (cmake-build-project-root this-root))
+               (when (equalp "finished\n" event)
+                 (cmake-build--invoke-run)))))
+        (cmake-build--invoke-run)))))
 
 (defun cmake-build-debug ()
   (interactive)

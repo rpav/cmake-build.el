@@ -155,7 +155,7 @@ The `"command"` parameter is what is passed to the shell, along with
 `"parameters"`.  For instance, we could have multiple configurations for
 `mytest`:
 
-```
+```lisp
 (( .. )
 
  (cmake-build-run-configs
@@ -174,7 +174,7 @@ The `"command"` parameter is what is passed to the shell, along with
 
 Additionally, one can specify `(:env ...)` to set various environment variables:
 
-```
+```lisp
   (mytest
    (:build "mytest")
    (:run "" "./mytest" "")
@@ -189,7 +189,7 @@ It is often useful to build "other" targets with cmake; for instance, you may
 create a target with cmake's `add_custom_target(TARGET-NAME ..)`.  You can
 specify this in `.cmake-build.el`:
 
-```
+```lisp
 ;;; Order doesn't matter here; context for illustration
 
 ((cmake-build-cmake-profiles ...)
@@ -202,12 +202,29 @@ specify this in `.cmake-build.el`:
 
 This will populate the "Other targets" menu.
 
+### Non-Project-Root CMakeLists.txt
+
+You may wish to have a project root that is not the source root, and does not have a CMakeLists.txt.  You can configure this in the `.cmake-build.el` using `cmake-build-source-root`:
+
+```lisp
+(...
+ (cmake-build-source-root "src")
+ ...)
+```
+
+This will append `src/` to the project root path, and search for your root CMakeLists.txt there.
+
+**Note:** If you merely wish to *build* out of the project tree, see the next option.
+
+### Out-of-tree builds
+
+You may wish to build in another location.  By default, builds happen in a profile-specific build directory in the root of the project.  You may set a new root for builds by using `M-x cmake-build-set-project-build-root` and specifying a path.  This is also available under the "Tools" menu with "Set project build root".
 
 ### Projectile modeline
 
 If you want to show the current run configuration in the modeline, you could use projectile's modeline function:
 
-```elisp
+```lisp
 (defun projectile-custom-mode-line-function ()
   (if-let ((name (cmake-build-get-run-config-name)))
       (format "[%s:%s]"
@@ -220,17 +237,13 @@ If you want to show the current run configuration in the modeline, you could use
 
 The critical call here is `(cmake-build-get-run-config-name)`.
 
-### Out-of-tree builds
-
-You may wish to build in another location.  By default, builds happen in a profile-specific build directory in the root of the project.  You may set a new root for builds by using `M-x cmake-build-set-project-build-root` and specifying a path.  This is also available under the "Tools" menu with "Set project build root".
-
 ### Alternate build directory name format
 
 By default, the build directory is named in the form `build.<profile>`.  For instance, if your profile is `gcc-debug`, the build directory is `build.gcc-debug`.
 
 If you wish to alter this, you may write a new elisp function in the following form:
 
-```elisp
+```lisp
 ;;; This will make the build directory "gcc-debug.build" instead
 (defun my-dir-name-function (project-root profile)
   (concat profile ".build"))
