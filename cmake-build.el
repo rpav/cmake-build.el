@@ -284,6 +284,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build--switch-to-buffer (buffer other-window)
   (when (and cmake-build-run-window-autoswitch
              other-window)
+    (message "switch to buffer %s %s" buffer other-window)
     (set-window-dedicated-p other-window nil)
     (set-window-buffer other-window buffer)
     (set-window-dedicated-p other-window t)
@@ -316,9 +317,11 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build--popup-buffer (name other-name)
   (let* ((buffer (get-buffer-create name))
          (current-buffer-window (get-buffer-window buffer))
-         (other-buffer-window (and other-name (get-buffer-window other-name))))
+         (other-buffer-window (and other-name (get-buffer-window other-name t)))
+         (buffer-config-name (cmake-build-get-run-config-name)))
     (unless (cmake-build--switch-to-buffer buffer other-buffer-window)
-      (display-buffer-pop-up-frame buffer default-frame-alist))))
+        (display-buffer-pop-up-frame buffer default-frame-alist))
+    t))
 
 (defun cmake-build--display-buffer (name &optional other-name)
   (case cmake-build-display-type
@@ -382,9 +385,10 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (cmake-build--invoke-build-current))
 
 
-(defun cmake-build--invoke-run ()
+(defun cmake-build--invoke-run (config)
   (cmake-build--save-project-root ()
-    (let* ((config (cmake-build--get-run-config))
+    (let* ((cmake-build-run-config config)
+           (config (cmake-build--get-run-config))
            (command (cmake-build--get-run-command config))
            (default-directory (cmake-build--get-build-dir (car config)))
            (process-environment (append
@@ -410,6 +414,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   ;; If we switch windows, remember what project we're building
   (when (cmake-build--validate "run")
     (let* ((this-root (cmake-build--project-root))
+           (this-run-config cmake-build-run-config)
            (cmake-build-project-root this-root))
       (if cmake-build-before-run
           (cmake-build--invoke-build-current
@@ -417,8 +422,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
              (let* ((this-root this-root)
                     (cmake-build-project-root this-root))
                (when (equalp "finished\n" event)
-                 (cmake-build--invoke-run)))))
-        (cmake-build--invoke-run)))))
+                 (cmake-build--invoke-run this-run-config)))))
+        (cmake-build--invoke-run this-run-config)))))
 
 (defun cmake-build-debug ()
   (interactive)
