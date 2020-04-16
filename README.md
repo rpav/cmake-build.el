@@ -255,20 +255,13 @@ Note that this should be a single filename without `/` or other path.  The proje
 
 A number of variables are available for customization:
 
-* `cmake-build-local-options-file`: This is the file where "local" options are
-  stored in your `~/.emacs.d/`.
-* `cmake-build-run-window-autoswitch`: (Default: set)  If set, this will
-  automatically switch between compile and run output.
-* `cmake-build-before-run`: (Default: set)  If set, this will try to build
-  before running.  If build fails, it will not run.
-* `cmake-build-run-window-size`: (Default: 20)  This is the size in lines of
-  the split build/run windows.
-* `cmake-build-split-threshold`: (Default: 40%) Percentage after which the
-  window will *not* be split; e.g. if the build window is set to 20, and the
-  current window is 25, this is 80% of the current window.  By default, it
-  would simply use the other window in this case.
-* `cmake-build-never-split`: (Default: nil) If set, this will *never* split the
-  window, and just use the default.
+* `cmake-build-local-options-file`: This is the file where "local" options are stored in your `~/.emacs.d/`.
+* `cmake-build-run-window-autoswitch`: (Default: set)  If set, this will automatically switch between compile and run output.
+* `cmake-build-before-run`: (Default: set)  If set, this will try to build before running.  If build fails, it will not run.
+* `cmake-build-display-type`: (Default: split)  How to display cmake-build output; 'split' will split the window (using cmake-build window splitting options), 'frame' will create a new frame.  In all cases, the buffers will be reused if they are visible, regardless of current display type.
+* `cmake-build-run-window-size`: (Default: 20)  This is the size in lines of the split build/run windows.
+* `cmake-build-split-threshold`: (Default: 40%) Percentage after which the window will *not* be split; e.g. if the build window is set to 20, and the current window is 25, this is 80% of the current window.  By default, it would simply use the other window in this case.
+* `cmake-build-never-split`: (Default: nil) If set, this will *never* split the window, and just use the default.
 * `cmake-build-switch-to-build`: (Default: nil) If set, this will also make the build window current.  By default, it leaves the current window active.
 
 ### Local settings

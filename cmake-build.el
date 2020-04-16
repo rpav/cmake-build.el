@@ -40,8 +40,17 @@ passed to cmake, and the current config."
 
 (defcustom cmake-build-before-run t
   "Build automtically before running app, when using `cmake-build-run`."
-  :type 'booloean
+  :type 'boolean
   :group 'cmake-build)
+
+(defcustom cmake-build-display-type 'split
+  "How to display cmake-build output; 'split' will split the
+window (using cmake-build window splitting options), 'frame' will
+create a new frame.  In all cases, the buffers will be reused if
+they are visible, regardless of current display type."
+  :type 'symbol
+  :group 'cmake-build
+  :options '(split frame))
 
 (defcustom cmake-build-run-window-size 20
   "Size of window to split."
@@ -272,7 +281,15 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build--get-run-command (config)
   (concat (cadr config) " " (caddr config)))
 
-(defun cmake-build--split-to-buffer (name &optional other-name)
+(defun cmake-build--switch-to-buffer (buffer other-window)
+  (when (and cmake-build-run-window-autoswitch
+             other-window)
+    (set-window-dedicated-p other-window nil)
+    (set-window-buffer other-window buffer)
+    (set-window-dedicated-p other-window t)
+    t))
+
+(defun cmake-build--split-to-buffer (name other-name)
   (let* ((window-point-insertion-type t)
          ;; Make sure we have a buffer created regardless
          (buffer (get-buffer-create name))
@@ -288,12 +305,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
                    (<= cmake-build-run-window-size
                        (* (/ cmake-build-split-threshold 100.0)
                           (window-total-height current-buffer-window)))))
-      (if (and cmake-build-run-window-autoswitch
-               other-buffer-window)
-          (progn
-            (set-window-dedicated-p other-buffer-window nil)
-            (set-window-buffer other-buffer-window buffer)
-            (set-window-dedicated-p other-buffer-window t))
+      (unless (cmake-build--switch-to-buffer buffer other-buffer-window)
         (when (and (not other-buffer-window)
                    (not (get-buffer-window name t)))
           (let ((window (split-window-below (- cmake-build-run-window-size))))
@@ -301,8 +313,20 @@ use Projectile to determine the root on a buffer-local basis, instead.")
             (set-window-dedicated-p window t))))
       t)))
 
+(defun cmake-build--popup-buffer (name other-name)
+  (let* ((buffer (get-buffer-create name))
+         (current-buffer-window (get-buffer-window buffer))
+         (other-buffer-window (and other-name (get-buffer-window other-name))))
+    (unless (cmake-build--switch-to-buffer buffer other-buffer-window)
+      (display-buffer-pop-up-frame buffer default-frame-alist))))
+
+(defun cmake-build--display-buffer (name &optional other-name)
+  (case cmake-build-display-type
+    (split (cmake-build--split-to-buffer name other-name))
+    (frame (cmake-build--popup-buffer name other-name))))
+
 (cl-defun cmake-build--compile (buffer-name command &key sentinel other-buffer-name)
-  (let* ((did-split (cmake-build--split-to-buffer buffer-name other-buffer-name))
+  (let* ((did-split (cmake-build--display-buffer buffer-name other-buffer-name))
          (display-buffer-alist
           ;; Suppress the window only if we actually split
           (if did-split
@@ -371,7 +395,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (buffer-name (cmake-build--run-buffer-name))
            (other-buffer-name (cmake-build--build-buffer-name))
            (display-buffer-alist
-            (if (cmake-build--split-to-buffer buffer-name other-buffer-name)
+            (if (cmake-build--display-buffer buffer-name other-buffer-name)
                 (cons (list buffer-name #'display-buffer-no-window)
                       display-buffer-alist)
               display-buffer-alist)))
