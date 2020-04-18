@@ -113,6 +113,17 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defvar cmake-build-build-roots nil
   "This is an alist of build roots per-project, for out-of-source building.")
 
+(defvar cmake-build-run-keymap (make-sparse-keymap))
+
+(defun cmake-build-run-window-quit ()
+  (interactive)
+  (if (= 1 (length (window-list)))
+      (delete-frame)
+    (delete-window)))
+
+(let ((map cmake-build-run-keymap))
+  (define-key map (kbd "q") 'cmake-build-run-window-quit))
+
 (cl-defmacro cmake-build--with-file ((filename &key readp writep) &body body)
   (declare (indent 1))
   `(with-temp-buffer
@@ -415,7 +426,9 @@ use Projectile to determine the root on a buffer-local basis, instead.")
           (message "Already running %s/%s"
                    (projectile-project-name)
                    (symbol-name cmake-build-profile))
-        (async-shell-command command buffer-name)))))
+        (async-shell-command command buffer-name)
+        (with-current-buffer buffer-name
+          (use-local-map cmake-build-run-keymap))))))
 
 (defun cmake-build-run ()
   (interactive)
