@@ -291,7 +291,6 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (if buffer-window t
     (when (and cmake-build-run-window-autoswitch
                other-window)
-      (message "switch to buffer %s %s" buffer other-window)
       (set-window-dedicated-p other-window nil)
       (set-window-buffer other-window buffer)
       (set-window-dedicated-p other-window t)
@@ -326,7 +325,6 @@ use Projectile to determine the root on a buffer-local basis, instead.")
          (current-buffer-window (get-buffer-window buffer t))
          (other-buffer-window (and other-name (get-buffer-window other-name t)))
          (buffer-config-name (cmake-build-get-run-config-name)))
-    (message "%s %s" buffer other-buffer-window)
     (unless (cmake-build--switch-to-buffer buffer current-buffer-window other-buffer-window)
       (display-buffer-pop-up-frame buffer default-frame-alist))
     (when cmake-build-raise-frame
