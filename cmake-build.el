@@ -52,6 +52,12 @@ they are visible, regardless of current display type."
   :group 'cmake-build
   :options '(split frame))
 
+(defcustom cmake-build-raise-frame t
+  "Whether to raise the frame of the build window on build. This
+only applies if `cmake-build-display-type` is frame."
+  :type 'boolean
+  :group 'cmake-build)
+
 (defcustom cmake-build-run-window-size 20
   "Size of window to split."
   :type 'integer
@@ -323,6 +329,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (message "%s %s" buffer other-buffer-window)
     (unless (cmake-build--switch-to-buffer buffer current-buffer-window other-buffer-window)
       (display-buffer-pop-up-frame buffer default-frame-alist))
+    (when cmake-build-raise-frame
+      (raise-frame (window-frame (get-buffer-window buffer t))))
     t))
 
 (defun cmake-build--display-buffer (name &optional other-name)
