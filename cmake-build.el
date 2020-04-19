@@ -58,6 +58,19 @@ only applies if `cmake-build-display-type` is frame."
   :type 'boolean
   :group 'cmake-build)
 
+(defcustom cmake-build-override-compile-keymap t
+  "Whether to use cmake-build-run-keymap for the compile window as well.
+This more or less provides specific/consistent behavior for
+quitting the frame or window."
+  :type 'boolean
+  :group 'cmake-build)
+
+(defcustom cmake-build-run-quit-frame-type 'lower
+  "How to handle the run frame when quitting."
+  :type 'symbol
+  :group 'cmake-build
+  :options '(lower delete))
+
 (defcustom cmake-build-run-window-size 20
   "Size of window to split."
   :type 'integer
@@ -118,7 +131,9 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build-run-window-quit ()
   (interactive)
   (if (= 1 (length (window-list)))
-      (delete-frame)
+      (case cmake-build-run-quit-frame-type
+        (lower (lower-frame))
+        (delete (delete-frame)))
     (delete-window)))
 
 (let ((map cmake-build-run-keymap))
@@ -386,7 +401,9 @@ use Projectile to determine the root on a buffer-local basis, instead.")
           (mapcar (lambda (w)
                     (set-window-point w (point-max)))
                   (get-buffer-window-list buffer-name nil t))
-          (visual-line-mode 1))))))
+          (visual-line-mode 1)
+          (when cmake-build-override-compile-keymap
+            (use-local-map cmake-build-run-keymap)))))))
 
 (defun cmake-build--invoke-build-current (&optional sentinel)
   (when (cmake-build--validate)
