@@ -136,8 +136,17 @@ use Projectile to determine the root on a buffer-local basis, instead.")
         (delete (delete-frame)))
     (delete-window)))
 
+(defun cmake-build-run-kill-process ()
+  (interactive)
+  (let ((p (get-buffer-process (current-buffer))))
+    (when p
+      (case major-mode
+        (shell-mode (kill-process p))
+        (compilation-mode (kill-compilation))))))
+
 (let ((map cmake-build-run-keymap))
-  (define-key map (kbd "q") 'cmake-build-run-window-quit))
+  (define-key map (kbd "q") 'cmake-build-run-window-quit)
+  (define-key map (kbd "C-c C-c") 'cmake-build-run-kill-process))
 
 (cl-defmacro cmake-build--with-file ((filename &key readp writep) &body body)
   (declare (indent 1))
