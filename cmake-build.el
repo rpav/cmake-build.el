@@ -574,8 +574,10 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (interactive)
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
-           (buffer-name (cmake-build--build-buffer-name)))
-      (cmake-build--compile buffer-name "cmake --build . --target clean"))))
+           (buffer-name (cmake-build--build-buffer-name))
+           (other-buffer-name (cmake-build--run-buffer-name)))
+      (cmake-build--compile buffer-name "cmake --build . --target clean"
+                            :other-buffer-name other-buffer-name))))
 
 (defun cmake-build--get-available-targets ()
   (cmake-build--save-project-root ()
@@ -591,8 +593,11 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (completing-read "Target: " (cmake-build--get-available-targets))))
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
-           (buffer-name (cmake-build--build-buffer-name)))
-      (cmake-build--compile buffer-name (concat "cmake --build . " cmake-build-options " --target " target-name)))))
+           (buffer-name (cmake-build--build-buffer-name))
+           (other-buffer-name (cmake-build--run-buffer-name)))
+      (cmake-build--compile buffer-name
+                            (concat "cmake --build . " cmake-build-options " --target " target-name)
+                            :other-buffer-name other-buffer-name))))
 
 
 (defun cmake-build-delete-current-windows ()
