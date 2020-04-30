@@ -136,7 +136,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
         (delete (delete-frame)))
     (delete-window)))
 
-(defun cmake-build-run-kill-process ()
+(defun cmake-build-kill-process ()
   (interactive)
   (let ((p (get-buffer-process (current-buffer))))
     (when p
@@ -146,7 +146,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 
 (let ((map cmake-build-run-keymap))
   (define-key map (kbd "q") 'cmake-build-run-window-quit)
-  (define-key map (kbd "C-c C-c") 'cmake-build-run-kill-process))
+  (define-key map (kbd "C-c C-c") 'cmake-build-kill-process))
 
 (cl-defmacro cmake-build--with-file ((filename &key readp writep) &body body)
   (declare (indent 1))
@@ -563,12 +563,14 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (cmake-build--save-project-root ()
       (let* ((default-directory build-dir)
              (buffer-name (cmake-build--build-buffer-name))
+             (other-buffer-name (cmake-build--run-buffer-name))
              (command (concat "cmake " (cmake-build--get-cmake-options)
                               " " (car (cmake-build--get-profile))
                               " " (cmake-build--maybe-remote-project-root))))
         (when (file-exists-p "CMakeCache.txt")
           (delete-file "CMakeCache.txt"))
-        (cmake-build--compile buffer-name command)))))
+        (cmake-build--compile buffer-name command
+                              :other-buffer-name other-buffer-name))))))
 
 (defun cmake-build-clean ()
   (interactive)
