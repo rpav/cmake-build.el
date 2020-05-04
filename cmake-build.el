@@ -71,6 +71,11 @@ quitting the frame or window."
   :group 'cmake-build
   :options '(lower delete))
 
+(defcustom cmake-build-quit-kills-process nil
+  "If cmake-build-quit-window also kills the process when quitting."
+  :type 'boolean
+  :group 'cmake-build)
+
 (defcustom cmake-build-run-window-size 20
   "Size of window to split."
   :type 'integer
@@ -128,8 +133,11 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 
 (defvar cmake-build-run-keymap (make-sparse-keymap))
 
-(defun cmake-build-run-window-quit ()
+(defun cmake-build-quit-window ()
   (interactive)
+  (when (and cmake-build-quit-kills-process
+             (get-buffer-process (current-buffer)))
+    (cmake-build-kill-buffer-process))
   (if (= 1 (length (window-list)))
       (case cmake-build-run-quit-frame-type
         (lower (lower-frame))
@@ -152,7 +160,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (cmake-build-kill-buffer-process (cmake-build--run-buffer-name)))
 
 (let ((map cmake-build-run-keymap))
-  (define-key map (kbd "q") 'cmake-build-run-window-quit)
+  (define-key map (kbd "q") 'cmake-build-quit-window)
   (define-key map (kbd "C-c C-c") 'cmake-build-kill-buffer-process))
 
 (cl-defmacro cmake-build--with-file ((filename &key readp writep) &body body)
