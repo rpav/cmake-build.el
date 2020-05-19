@@ -567,8 +567,10 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build-run-cmake ()
   (interactive)
   (let* ((default-directory (cmake-build--get-build-dir))
-         (buffer-name (cmake-build--build-buffer-name)))
-    (cmake-build--compile buffer-name "cmake .")))
+         (buffer-name (cmake-build--build-buffer-name))
+         (other-buffer-name (cmake-build--run-buffer-name)))
+    (cmake-build--compile buffer-name "cmake ."
+                          :other-buffer-name other-buffer-name)))
 
 (defun cmake-build-clear-cache-and-configure ()
   (interactive)
