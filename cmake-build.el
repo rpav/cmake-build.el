@@ -191,7 +191,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (if (tramp-tramp-file-p project-root-raw)
                (let ((parsed-root (tramp-dissect-file-name project-root-raw)))
                  (tramp-file-name-localname parsed-root))
-             project-root-raw))))
+             (expand-file-name project-root-raw)))))
     (concat project-root (or (cmake-build--source-root) ""))))
 
 (cl-defmacro cmake-build--save-project-root (nil &body body)
