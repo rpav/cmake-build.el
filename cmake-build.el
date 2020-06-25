@@ -312,6 +312,12 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (let ((config (cmake-build--get-config config)))
     (cdr (assoc :env config))))
 
+(defun cmake-build--get-run-config-dirtype (&optional config)
+  (let* ((config (cmake-build--get-config config))
+         (dirtype (cdr (assoc :dirtype config))))
+    (if dirtype
+        (car dirtype)
+      "build")))
 (defun cmake-build--get-other-targets ()
   (cdr (assoc 'cmake-build-other-targets (cmake-build--get-project-data))))
 
@@ -455,7 +461,10 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (let* ((cmake-build-run-config config)
            (config (cmake-build--get-run-config))
            (command (cmake-build--get-run-command config))
-           (default-directory (cmake-build--get-build-dir (car config)))
+           (dirtype (cmake-build--get-run-config-dirtype))
+           (default-directory (cond ((string= dirtype "build") (cmake-build--get-build-dir (car config)))
+                     ((string= dirtype "source") (concat (cmake-build--maybe-remote-project-root) (car config)))
+                     ((string= dirtype "abs") (car config))))
            (process-environment (append
                                  (list (concat "PROJECT_ROOT="
                                                (cmake-build--maybe-remote-project-root)))
