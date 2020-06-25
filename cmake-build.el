@@ -571,6 +571,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 
 (defun cmake-build-run-cmake ()
   (interactive)
+  (cmake-build--save-project-root ()
   (let* ((default-directory (cmake-build--get-build-dir))
          (buffer-name (cmake-build--build-buffer-name))
          (other-buffer-name (cmake-build--run-buffer-name)))
