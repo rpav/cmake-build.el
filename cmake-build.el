@@ -455,6 +455,28 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (interactive)
   (cmake-build--invoke-build-current))
 
+(defun cmake-build--invoke-run2 (command wd)
+  (cmake-build--save-project-root ()
+    (let* ((config (cmake-build--get-run-config))
+           (default-directory wd)
+           (process-environment (append
+                                 (list (concat "PROJECT_ROOT="
+                                               (cmake-build--maybe-remote-project-root)))
+                                 (cmake-build--get-run-config-env)
+                                 process-environment))
+           (buffer-name (cmake-build--run-buffer-name))
+           (other-buffer-name (cmake-build--build-buffer-name))
+           (display-buffer-alist
+            (if (cmake-build--split-to-buffer buffer-name other-buffer-name)
+                (cons (list buffer-name #'display-buffer-no-window)
+                      display-buffer-alist)
+              display-buffer-alist)))
+      (if (get-buffer-process buffer-name)
+          (message "Already running %s/%s"
+                   (projectile-project-name)
+                   (symbol-name cmake-build-profile))
+        (async-shell-command command buffer-name)))))
+
 
 (defun cmake-build--invoke-run (config)
   (cmake-build--save-project-root ()
@@ -506,6 +528,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (let* ((config (cmake-build--get-run-config))
          (command (cmake-build--get-run-command config))
          (default-directory (cmake-build--get-build-dir (car config)))
+         (process-environment (append (cmake-build--get-run-config-env) process-environment)))
+    (gdb (concat "gdb -i=mi --args " command))))
+
+(defun cmake-build-debug2 (command working-dir)
+  (interactive)
+  (let* ((config (cmake-build--get-run-config))
+         (default-directory working-dir)
          (process-environment (append (cmake-build--get-run-config-env) process-environment)))
     (gdb (concat "gdb -i=mi --args " command))))
 
@@ -581,11 +610,11 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build-run-cmake ()
   (interactive)
   (cmake-build--save-project-root ()
-  (let* ((default-directory (cmake-build--get-build-dir))
-         (buffer-name (cmake-build--build-buffer-name))
-         (other-buffer-name (cmake-build--run-buffer-name)))
-    (cmake-build--compile buffer-name "cmake ."
-                          :other-buffer-name other-buffer-name)))
+    (let* ((default-directory (cmake-build--get-build-dir))
+           (buffer-name (cmake-build--build-buffer-name))
+           (other-buffer-name (cmake-build--run-buffer-name)))
+      (cmake-build--compile buffer-name "cmake ."
+                          :other-buffer-name other-buffer-name))))
 
 (defun cmake-build--create-compile-commands-symlink ()
   (let ((filename (expand-file-name "compile_commands.json" (cmake-build--project-root))))
