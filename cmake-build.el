@@ -572,6 +572,12 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (cmake-build--compile buffer-name "cmake ."
                           :other-buffer-name other-buffer-name)))
 
+(defun cmake-build--create-compile-commands-symlink ()
+  (let ((filename (expand-file-name "compile_commands.json" (cmake-build--project-root))))
+    (if (or (file-exists-p filename) (file-symlink-p filename))
+	(delete-file filename)))
+  (make-symbolic-link (expand-file-name "compile_commands.json" default-directory) (cmake-build--project-root)))
+
 (defun cmake-build-clear-cache-and-configure ()
   (interactive)
   (let ((build-dir (cmake-build--get-build-dir)))
@@ -582,12 +588,14 @@ use Projectile to determine the root on a buffer-local basis, instead.")
              (buffer-name (cmake-build--build-buffer-name))
              (other-buffer-name (cmake-build--run-buffer-name))
              (command (concat "cmake " (cmake-build--get-cmake-options)
+                              " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
                               " " (car (cmake-build--get-profile))
                               " " (cmake-build--maybe-remote-project-root))))
         (when (file-exists-p "CMakeCache.txt")
           (delete-file "CMakeCache.txt"))
         (cmake-build--compile buffer-name command
-                              :other-buffer-name other-buffer-name)))))
+                              :other-buffer-name other-buffer-name)
+        (cmake-build--create-compile-commands-symlink)))))
 
 (defun cmake-build-clean ()
   (interactive)
