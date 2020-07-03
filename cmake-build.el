@@ -112,6 +112,11 @@ default, the name is in the form `build.<profile>`."
   :type 'function
   :group 'cmake-build)
 
+(defcustom cmake-build-export-compile-commands nil
+  "Ask cmake to generate compile_commands.json and to create a symlink in project-root."
+  :type 'boolean
+  :group 'cmake-build)
+
 ;;; These are very temporary and likely very host-specific variables,
 ;;; not something we want to constantly modify in custom.el
 (defvar cmake-build-profile 'clang-release
@@ -588,14 +593,15 @@ use Projectile to determine the root on a buffer-local basis, instead.")
              (buffer-name (cmake-build--build-buffer-name))
              (other-buffer-name (cmake-build--run-buffer-name))
              (command (concat "cmake " (cmake-build--get-cmake-options)
-                              " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
+                              (when cmake-build-export-compile-commands " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
                               " " (car (cmake-build--get-profile))
                               " " (cmake-build--maybe-remote-project-root))))
         (when (file-exists-p "CMakeCache.txt")
           (delete-file "CMakeCache.txt"))
         (cmake-build--compile buffer-name command
                               :other-buffer-name other-buffer-name)
-        (cmake-build--create-compile-commands-symlink)))))
+        (when cmake-build-export-compile-commands
+          (cmake-build--create-compile-commands-symlink))))))
 
 (defun cmake-build-clean ()
   (interactive)
