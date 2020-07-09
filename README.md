@@ -263,6 +263,7 @@ A number of variables are available for customization:
 * `cmake-build-split-threshold`: (Default: 40%) Percentage after which the window will *not* be split; e.g. if the build window is set to 20, and the current window is 25, this is 80% of the current window.  By default, it would simply use the other window in this case.
 * `cmake-build-never-split`: (Default: nil) If set, this will *never* split the window, and just use the default.
 * `cmake-build-switch-to-build`: (Default: nil) If set, this will also make the build window current.  By default, it leaves the current window active.
+* `cmake-build-export-compile-commands`: (Default: nil) If set, this will ask cmake to export the compile commands during configuration, and create a symbolic link from project-root to the `compile_commands.json` file created in the build directory. __This will erase any previoulsy created `compile_commands.json` file in project-root directory__.
 
 ### Local settings
 
