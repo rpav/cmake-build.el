@@ -125,6 +125,10 @@ default, the name is in the form `build.<profile>`."
 (defvar cmake-build-options ""
   "Additional build options passed to cmake.  For example, \"-j 7\" for parallel builds.")
 
+(defvar cmake-build-tool-options ""
+  "Additional build options passed to build tool, after -- .  For example, \"-l 4\" for make load builds.")
+
+
 (defvar cmake-build-run-config nil
   "Set name for cmake-build run, specifying the target run-config name.  Run configurations are a
 path, command, and arguments for a particular run.")
@@ -209,11 +213,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (let* ((form (read (buffer-string)))
            (build-profile (cadr (assoc :build-profile form)))
            (build-options (cadr (assoc :build-options form)))
+           (build-tool-options (cadr (assoc :build-tool-options form)))
            (build-run-config (cadr (assoc :build-run-config form)))
            (build-project-root (cadr (assoc :build-project-root form)))
            (build-roots (cadr (assoc :build-roots form))))
       (setq cmake-build-profile (or build-profile cmake-build-profile))
       (setq cmake-build-options (or build-options cmake-build-options))
+      (setq cmake-build-tool-options (or build-tool-options cmake-build-tool-options))
       (setq cmake-build-run-config (or build-run-config cmake-build-run-config))
       (setq cmake-build-project-root (or build-project-root cmake-build-project-root))
       (setq cmake-build-build-roots (or build-roots cmake-build-build-roots)))))
@@ -227,6 +233,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (cmake-build--with-options-file (:writep t)
     (print `((:build-profile ,cmake-build-profile)
              (:build-options ,cmake-build-options)
+             (:build-tool-options ,cmake-build-tool-options)
              (:build-run-config ,cmake-build-run-config)
              (:build-project-root ,cmake-build-project-root)
              (:build-roots ,cmake-build-build-roots))
@@ -445,7 +452,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (cmake-build--save-project-root ()
       (let* ((default-directory (cmake-build--get-build-dir))
              (config (cmake-build--get-build-config))
-             (command (concat "cmake --build . " cmake-build-options " --target " (car config)))
+             (command (concat "cmake --build . " cmake-build-options " --target " (car config) " -- " cmake-build-tool-options))
              (buffer-name (cmake-build--build-buffer-name))
              (other-buffer-name (cmake-build--run-buffer-name)))
         (cmake-build--compile buffer-name command
@@ -543,6 +550,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
    (list
     (read-string "CMake build options: " cmake-build-options)))
   (setq cmake-build-options option-string))
+
+
+(defun cmake-build-set-tool-options (option-string)
+  (interactive
+   (list
+    (read-string "CMake build tool options: " cmake-build-tool-options)))
+  (setq cmake-build-tool-options option-string))
 
 (defun cmake-build-set-config (config-name)
   (interactive
@@ -670,7 +684,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (buffer-name (cmake-build--build-buffer-name))
            (other-buffer-name (cmake-build--run-buffer-name)))
       (cmake-build--compile buffer-name
-                            (concat "cmake --build . " cmake-build-options " --target " target-name)
+                            (concat "cmake --build . " cmake-build-options " --target " target-name " -- " cmake-build-tool-options)
                             :other-buffer-name other-buffer-name))))
 
 
