@@ -128,7 +128,6 @@ default, the name is in the form `build.<profile>`."
 (defvar cmake-build-tool-options ""
   "Additional build options passed to build tool, after -- .  For example, \"-l 4\" for make load builds.")
 
-
 (defvar cmake-build-run-config nil
   "Set name for cmake-build run, specifying the target run-config name.  Run configurations are a
 path, command, and arguments for a particular run.")
@@ -325,6 +324,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (if dirtype
         (car dirtype)
       "build")))
+
 (defun cmake-build--get-other-targets ()
   (cdr (assoc 'cmake-build-other-targets (cmake-build--get-project-data))))
 
