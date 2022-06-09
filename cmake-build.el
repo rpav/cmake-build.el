@@ -307,8 +307,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
               (cmake-build--get-configs))))
 
 (defun cmake-build--get-build-config (&optional config)
-  (let ((config (cmake-build--get-config config)))
-    (cdr (assoc :build config))))
+  (let* ((config (cmake-build--get-config config)))
+    (or (cdr (assoc :build config)) '("all"))))
 
 (defun cmake-build--get-run-config (&optional config)
   (let ((config (cmake-build--get-config config)))
