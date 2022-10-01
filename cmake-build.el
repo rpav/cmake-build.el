@@ -648,7 +648,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
              (other-buffer-name (cmake-build--run-buffer-name))
              (command (concat "cmake " (cmake-build--get-cmake-options)
                               (when cmake-build-export-compile-commands " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-                              " -G\"CodeBlocks - Unix Makefiles\"" ;; For rt-run
+;;                              " -G\"CodeBlocks - Unix Makefiles\"" ;; For rt-run
+;;                              " -G\"CodeBlocks - Ninja\"" ;; For rt-run
                               " " (car (cmake-build--get-profile))
                               " " (cmake-build--maybe-remote-project-root))))
         (when (file-exists-p "CMakeCache.txt")
