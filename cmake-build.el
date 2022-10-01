@@ -648,8 +648,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
              (other-buffer-name (cmake-build--run-buffer-name))
              (command (concat "cmake " (cmake-build--get-cmake-options)
                               (when cmake-build-export-compile-commands " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
-;;                              " -G\"CodeBlocks - Unix Makefiles\"" ;; For rt-run
-;;                              " -G\"CodeBlocks - Ninja\"" ;; For rt-run
+                              ;;                              " -G\"CodeBlocks - Unix Makefiles\"" ;; For rt-run
+                              ;;                              " -G\"CodeBlocks - Ninja\"" ;; For rt-run
                               " " (car (cmake-build--get-profile))
                               " " (cmake-build--maybe-remote-project-root))))
         (when (file-exists-p "CMakeCache.txt")
@@ -675,12 +675,12 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (raw-targets-list (split-string (shell-command-to-string "cmake --build . --target help") "\n"))
            (generator (if (string-match-p (regexp-quote "Makefile") (car raw-targets-list)) "Makefile" "Ninja"))
            (raw-targets-list (cdr raw-targets-list)))
-        (cond ((string= generator "Makefile")
-               ;; the actual targets are after "... " in each string
-               (mapcar 'cadr (mapcar  (function (lambda (x) (split-string x " "))) raw-targets-list)))
-              ((string= generator "Ninja")
-               ;; the actual targets are before ":" in each string
-               (mapcar 'car (mapcar  (function (lambda (x) (split-string x ":"))) raw-targets-list)))))))
+      (cond ((string= generator "Makefile")
+             ;; the actual targets are after "... " in each string
+             (mapcar 'cadr (mapcar  (function (lambda (x) (split-string x " "))) raw-targets-list)))
+            ((string= generator "Ninja")
+             ;; the actual targets are before ":" in each string
+             (mapcar 'car (mapcar  (function (lambda (x) (split-string x ":"))) raw-targets-list)))))))
 
 (defun cmake-build-other-target (target-name)
   (interactive
