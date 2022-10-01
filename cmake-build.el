@@ -125,6 +125,9 @@ default, the name is in the form `build.<profile>`."
 (defvar cmake-build-options ""
   "Additional build options passed to cmake.  For example, \"-j 7\" for parallel builds.")
 
+(defvar cmake-build-tool-options ""
+  "Additional build options passed to build tool, after -- .  For example, \"-l 4\" for make load builds.")
+
 (defvar cmake-build-run-config nil
   "Set name for cmake-build run, specifying the target run-config name.  Run configurations are a
 path, command, and arguments for a particular run.")
@@ -209,11 +212,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (let* ((form (read (buffer-string)))
            (build-profile (cadr (assoc :build-profile form)))
            (build-options (cadr (assoc :build-options form)))
+           (build-tool-options (cadr (assoc :build-tool-options form)))
            (build-run-config (cadr (assoc :build-run-config form)))
            (build-project-root (cadr (assoc :build-project-root form)))
            (build-roots (cadr (assoc :build-roots form))))
       (setq cmake-build-profile (or build-profile cmake-build-profile))
       (setq cmake-build-options (or build-options cmake-build-options))
+      (setq cmake-build-tool-options (or build-tool-options cmake-build-tool-options))
       (setq cmake-build-run-config (or build-run-config cmake-build-run-config))
       (setq cmake-build-project-root (or build-project-root cmake-build-project-root))
       (setq cmake-build-build-roots (or build-roots cmake-build-build-roots)))))
@@ -227,6 +232,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (cmake-build--with-options-file (:writep t)
     (print `((:build-profile ,cmake-build-profile)
              (:build-options ,cmake-build-options)
+             (:build-tool-options ,cmake-build-tool-options)
              (:build-run-config ,cmake-build-run-config)
              (:build-project-root ,cmake-build-project-root)
              (:build-roots ,cmake-build-build-roots))
@@ -301,8 +307,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
               (cmake-build--get-configs))))
 
 (defun cmake-build--get-build-config (&optional config)
-  (let ((config (cmake-build--get-config config)))
-    (cdr (assoc :build config))))
+  (let* ((config (cmake-build--get-config config)))
+    (or (cdr (assoc :build config)) '("all"))))
 
 (defun cmake-build--get-run-config (&optional config)
   (let ((config (cmake-build--get-config config)))
@@ -311,6 +317,13 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 (defun cmake-build--get-run-config-env (&optional config)
   (let ((config (cmake-build--get-config config)))
     (cdr (assoc :env config))))
+
+(defun cmake-build--get-run-config-dirtype (&optional config)
+  (let* ((config (cmake-build--get-config config))
+         (dirtype (cdr (assoc :dirtype config))))
+    (if dirtype
+        (car dirtype)
+      "build")))
 
 (defun cmake-build--get-other-targets ()
   (cdr (assoc 'cmake-build-other-targets (cmake-build--get-project-data))))
@@ -439,7 +452,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
     (cmake-build--save-project-root ()
       (let* ((default-directory (cmake-build--get-build-dir))
              (config (cmake-build--get-build-config))
-             (command (concat "cmake --build . " cmake-build-options " --target " (car config)))
+             (command (concat "cmake --build . " cmake-build-options " --target " (car config) " -- " cmake-build-tool-options))
              (buffer-name (cmake-build--build-buffer-name))
              (other-buffer-name (cmake-build--run-buffer-name)))
         (cmake-build--compile buffer-name command
@@ -449,13 +462,38 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (interactive)
   (cmake-build--invoke-build-current))
 
+(defun cmake-build--invoke-run2 (command wd)
+  (cmake-build--save-project-root ()
+    (let* ((config (cmake-build--get-run-config))
+           (default-directory wd)
+           (process-environment (append
+                                 (list (concat "PROJECT_ROOT="
+                                               (cmake-build--maybe-remote-project-root)))
+                                 (cmake-build--get-run-config-env)
+                                 process-environment))
+           (buffer-name (cmake-build--run-buffer-name))
+           (other-buffer-name (cmake-build--build-buffer-name))
+           (display-buffer-alist
+            (if (cmake-build--split-to-buffer buffer-name other-buffer-name)
+                (cons (list buffer-name #'display-buffer-no-window)
+                      display-buffer-alist)
+              display-buffer-alist)))
+      (if (get-buffer-process buffer-name)
+          (message "Already running %s/%s"
+                   (projectile-project-name)
+                   (symbol-name cmake-build-profile))
+        (async-shell-command command buffer-name)))))
+
 
 (defun cmake-build--invoke-run (config)
   (cmake-build--save-project-root ()
     (let* ((cmake-build-run-config config)
            (config (cmake-build--get-run-config))
            (command (cmake-build--get-run-command config))
-           (default-directory (cmake-build--get-build-dir (car config)))
+           (dirtype (cmake-build--get-run-config-dirtype))
+           (default-directory (cond ((string= dirtype "build") (cmake-build--get-build-dir (car config)))
+                     ((string= dirtype "source") (concat (cmake-build--maybe-remote-project-root) (car config)))
+                     ((string= dirtype "abs") (car config))))
            (process-environment (append
                                  (list (concat "PROJECT_ROOT="
                                                (cmake-build--maybe-remote-project-root)))
@@ -500,11 +538,25 @@ use Projectile to determine the root on a buffer-local basis, instead.")
          (process-environment (append (cmake-build--get-run-config-env) process-environment)))
     (gdb (concat "gdb -i=mi --args " command))))
 
+(defun cmake-build-debug2 (command working-dir)
+  (interactive)
+  (let* ((config (cmake-build--get-run-config))
+         (default-directory working-dir)
+         (process-environment (append (cmake-build--get-run-config-env) process-environment)))
+    (gdb (concat "gdb -i=mi --args " command))))
+
 (defun cmake-build-set-options (option-string)
   (interactive
    (list
     (read-string "CMake build options: " cmake-build-options)))
   (setq cmake-build-options option-string))
+
+
+(defun cmake-build-set-tool-options (option-string)
+  (interactive
+   (list
+    (read-string "CMake build tool options: " cmake-build-tool-options)))
+  (setq cmake-build-tool-options option-string))
 
 (defun cmake-build-set-config (config-name)
   (interactive
@@ -571,11 +623,12 @@ use Projectile to determine the root on a buffer-local basis, instead.")
 
 (defun cmake-build-run-cmake ()
   (interactive)
-  (let* ((default-directory (cmake-build--get-build-dir))
-         (buffer-name (cmake-build--build-buffer-name))
-         (other-buffer-name (cmake-build--run-buffer-name)))
-    (cmake-build--compile buffer-name "cmake ."
-                          :other-buffer-name other-buffer-name)))
+  (cmake-build--save-project-root ()
+    (let* ((default-directory (cmake-build--get-build-dir))
+           (buffer-name (cmake-build--build-buffer-name))
+           (other-buffer-name (cmake-build--run-buffer-name)))
+      (cmake-build--compile buffer-name "cmake ."
+                          :other-buffer-name other-buffer-name))))
 
 (defun cmake-build--create-compile-commands-symlink ()
   (let ((filename (expand-file-name "compile_commands.json" (cmake-build--project-root))))
@@ -595,6 +648,8 @@ use Projectile to determine the root on a buffer-local basis, instead.")
              (other-buffer-name (cmake-build--run-buffer-name))
              (command (concat "cmake " (cmake-build--get-cmake-options)
                               (when cmake-build-export-compile-commands " -DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
+                              ;;                              " -G\"CodeBlocks - Unix Makefiles\"" ;; For rt-run
+                              ;;                              " -G\"CodeBlocks - Ninja\"" ;; For rt-run
                               " " (car (cmake-build--get-profile))
                               " " (cmake-build--maybe-remote-project-root))))
         (when (file-exists-p "CMakeCache.txt")
@@ -617,9 +672,15 @@ use Projectile to determine the root on a buffer-local basis, instead.")
   (cmake-build--save-project-root ()
     (let* ((default-directory (cmake-build--get-build-dir))
            ;; cdr to skip the first line which is a cmake comment
-           (raw-targets-list (cdr (split-string (shell-command-to-string "cmake --build . --target help") "\n"))))
-      ;; the actual targets are after "... " in each string
-      (mapcar 'cadr (mapcar  (function (lambda (x) (split-string x " "))) raw-targets-list)))))
+           (raw-targets-list (split-string (shell-command-to-string "cmake --build . --target help") "\n"))
+           (generator (if (string-match-p (regexp-quote "Makefile") (car raw-targets-list)) "Makefile" "Ninja"))
+           (raw-targets-list (cdr raw-targets-list)))
+      (cond ((string= generator "Makefile")
+             ;; the actual targets are after "... " in each string
+             (mapcar 'cadr (mapcar  (function (lambda (x) (split-string x " "))) raw-targets-list)))
+            ((string= generator "Ninja")
+             ;; the actual targets are before ":" in each string
+             (mapcar 'car (mapcar  (function (lambda (x) (split-string x ":"))) raw-targets-list)))))))
 
 (defun cmake-build-other-target (target-name)
   (interactive
@@ -630,7 +691,7 @@ use Projectile to determine the root on a buffer-local basis, instead.")
            (buffer-name (cmake-build--build-buffer-name))
            (other-buffer-name (cmake-build--run-buffer-name)))
       (cmake-build--compile buffer-name
-                            (concat "cmake --build . " cmake-build-options " --target " target-name)
+                            (concat "cmake --build . " cmake-build-options " --target " target-name " -- " cmake-build-tool-options)
                             :other-buffer-name other-buffer-name))))
 
 
